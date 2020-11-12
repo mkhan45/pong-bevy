@@ -1,5 +1,5 @@
 [package]
-name = "ssshmup-bevy"
+name = "pong-bevy"
 version = "0.1.0"
 authors = ["Mikail Khan <mikail.khan45@gmail.com>"]
 edition = "2018"
