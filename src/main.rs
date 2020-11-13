@@ -52,7 +52,7 @@ fn init(
             &mut meshes,
             ShapeType::Circle(BALL_RADIUS),
             TessellationMode::Fill(&FillOptions::default()),
-            Vec3::new(0.0, 0.0, 0.0).into(),
+            Vec3::new(0.0, 0.0, 0.0),
         ))
         .with(Velocity(Vec2::new(125.0, 225.0)))
         .with(Radius(BALL_RADIUS))
@@ -73,10 +73,10 @@ fn init(
         .with(Paddle(PaddleSide::Left))
         .with(Velocity(Vec2::zero()));
 
-    // left paddle
+    // right paddle
     commands
         .spawn(primitive(
-            material.clone(),
+            material,
             &mut meshes,
             ShapeType::Rectangle {
                 width: PADDLE_WIDTH,
@@ -105,10 +105,13 @@ fn wall_collide(windows: Res<Windows>, mut query: Query<(&mut Velocity, &Transfo
 
     query.iter_mut().for_each(|(mut vel, transform, radius)| {
         let pos = transform.translation;
-        if !(-width / 2.0 + radius.0..width / 2.0 - radius.0).contains(&pos.x()) {
+        if (-width / 2.0 >= pos.x() - radius.0 && vel.0.x() < 0.0)
+            || (width / 2.0 <= pos.x() + radius.0 && vel.0.x() > 0.0)
+        {
             *vel.0.x_mut() *= -1.0;
-        }
-        if !(-height / 2.0 + radius.0..height / 2.0 - radius.0).contains(&pos.y()) {
+        } else if (-height / 2.0 >= pos.y() - radius.0 && vel.0.y() < 0.0)
+            || (height / 2.0 <= pos.y() + radius.0 && vel.0.y() > 0.0)
+        {
             *vel.0.y_mut() *= -1.0;
         }
     });
@@ -121,13 +124,13 @@ fn paddle_collide(
     for (_, ball_transform, mut vel) in ball_query.iter_mut() {
         for (_, paddle_transform) in paddle_query.iter() {
             let collision = collide(
-                paddle_transform.translation,
+                paddle_transform.translation
+                    + Vec3::new(PADDLE_WIDTH / 2.0, PADDLE_HEIGHT / 2.0, 0.0),
                 Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT),
-                ball_transform.translation - Vec3::new(BALL_RADIUS, BALL_RADIUS, 0.0),
-                Vec2::new(2.0*BALL_RADIUS, 2.0*BALL_RADIUS),
+                ball_transform.translation,
+                Vec2::new(2.0 * BALL_RADIUS, 2.0 * BALL_RADIUS),
             );
 
-            dbg!(&collision);
             match collision {
                 Some(Collision::Left) => {
                     if vel.0.x() < 0.0 {
@@ -139,7 +142,17 @@ fn paddle_collide(
                         *vel.0.x_mut() *= -1.0;
                     }
                 }
-                _ => {}
+                Some(Collision::Top) => {
+                    if vel.0.y() > 0.0 {
+                        *vel.0.y_mut() *= -1.0;
+                    }
+                }
+                Some(Collision::Bottom) => {
+                    if vel.0.y() < 0.0 {
+                        *vel.0.y_mut() *= -1.0;
+                    }
+                }
+                None => {}
             }
 
             if collision.is_some() {
